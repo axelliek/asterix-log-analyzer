@@ -8,8 +8,8 @@ public class StackedBarValues(long start, long end, long wait, long speak, strin
     public long Speak { get; set; } = speak;
     public string? Status { get; set; } = status;
 
-    public StackedBarValues() : this(0L, 0L, 0L, 0L, string.Empty)
-    {
+    public StackedBarValues() : this(0L, 0L, 0L, 0L, string.Empty) { }
 
-    }
+    public bool Intersect(StackedBarValues call) => !(Start >= call.End);
+   
 }
