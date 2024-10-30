@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Diagnostics;
 using Asterix_Log_Analyzer.Domain;
-using Asterix_Log_Analyzer.Logs;
+using Asterix_Log_Analyzer.Logging;
 using Asterix_Log_Analyzer.Chart;
 
 
