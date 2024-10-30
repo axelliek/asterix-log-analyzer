@@ -1,79 +1,14 @@
-﻿// See https://aka.ms/new-console-template for more information
-// Console.WriteLine("Hello, World!");
-
-//using ScottPlot;
-
-using System.Data;
+﻿using System.Data;
 using System.Drawing;
 using System.Diagnostics;
+using Asterix_Log_Analyzer.Domain;
+using Asterix_Log_Analyzer.Logs;
+using Asterix_Log_Analyzer.Chart;
+    
+
 
 namespace Asterix_Log_Analyzer;
-public class LogEntry
-{
-    public required string Timestamp { get; set; }
-    public required string CallID { get; set; }
-    public required string Queue { get; set; }
-    public string? Channel { get; set; }
-    public required string Event { get; set; }
-    public string? Param1 { get; set; }
-    public string? Param2 { get; set; }
-    public string? Param3 { get; set; }
-    public override string ToString()
-    {
-        return $"{CallID}\t{Event}";// base.ToString();
-    }
-}
 
-public class ChartInfo
-{
-    public List<string>? xCategories { get; set; }// = new string[0];
-    public List<string>? yCategories { get; set; } // = { "0", "1", "2", "3" };
-
-    public int Width { get; set; } = 1500;
-    public int Height { get; set; } = 1000;
-    public int Margin { get; set; } = 100;
-    public string TimeStart { get; internal set; }
-    public string TimeEnd { get; internal set; }
-}
-
-
-
-
-internal class Agent
-{
-
-    public required string AgentId { get; set; }
-}
-
-public class CallInfo
-{
-    public const string StatusComplete = "COMPLETE";
-    public const string StatusAbandon = "ABANDON";
-    public const string StatusConnect = "CONNECT";
-    public const string StatusWaited = "WAITED";
-    public const string StatusUnknown = "UNKNOWN";
-
-    public long CallStart { get; set; } = 0L; //=> this.CallEnd - this.CallWaittime - this.CallSpeaktime;//{ get; set; } = 0L;
-    public long CallEnd { get; set; } = 0L;
-    public string CallStatus { get; set; } = CallInfo.StatusUnknown;
-    public long CallWaittime { get; set; } = 0L;
-    public long CallSpeaktime { get; set; } = 0L;
-    public string AgentId { get; set; } = string.Empty;
-    public string CallId { get; set; } = string.Empty;
-    public override string ToString()
-    {
-        return $"{CallId},\t{CallStart},\t {CallEnd},\t {CallWaittime},\t {CallSpeaktime},\t {CallStatus}";
-    }
-}
-
-/**
- * <summary>Represents Program start options</summary>
- */
-public class ProgramOptions
-{
-    public string InputFilePath { get; set; } = string.Empty;
-    public string OutputFilePath { get; set; } = string.Empty;
-}
 class Program
 {
     private const char LineSeparator = '|';
@@ -177,8 +112,10 @@ class Program
         Console.WriteLine(fileName);
         var imageFullName = Path.Combine(directory.FullName, fileName);
         Console.WriteLine(imageFullName);
+
         CreateSampleChartImage(imageFullName, GenerateChartInfo(calls, firstCall, lastCall));
-        Run(imageFullName);
+
+        RunProcess(imageFullName);
     }
 
     private static ChartInfo GenerateChartInfo(List<CallInfo> calls, long startTime, long endTime)
@@ -189,18 +126,18 @@ class Program
             TimeEnd = DateTimeOffset.FromUnixTimeSeconds(endTime).DateTime.ToString("HH:MM:ss")
         };
         var t = new List<string>
-        {
-            chartInfo.TimeStart
-        };
-        for (long i = startTime; i < endTime ; i += 900) //15*60
+    {
+        chartInfo.TimeStart
+    };
+        for (long i = startTime; i < endTime; i += 900) //15*60
         {
             var dt = DateTimeOffset.FromUnixTimeSeconds(i);//.DateTime;
-            
+
             t.Add($"{dt.AddMinutes(15).ToString("HH:MM:ss")}");
         }
         t.Add(chartInfo.TimeEnd);
         chartInfo.xCategories = t;
-        chartInfo.yCategories = new List<string>(){ "1","2","3"};
+        chartInfo.yCategories = new List<string>() { "1", "2", "3" };
 
         return chartInfo;
     }
@@ -257,8 +194,6 @@ class Program
         return ci;
     }
 
-
-
     private static ProgramOptions ProcessProgramArgs(string[] args, bool usetestdata = true)
     {
         if (args.Length == 0 || usetestdata)
@@ -285,7 +220,7 @@ class Program
         Console.WriteLine("Asterix-Log-Analyzer.exe [<LOG_FILE> [-o <BITMAP_OUTPUT_DIRECTORY>]]");
     }
 
-    public static void Run(string command, string? directory = null)
+    public static void RunProcess(string command, string? directory = null)
     {
         using Process process = new()
         {
@@ -411,26 +346,5 @@ class Program
         bmp.Save(imagePath);
     }
 #pragma warning restore CA1416
-    private static void PlotData(List<object> data)
-    {
-        //// Plot erstellen
-        //var plt = new ScottPlot.Plot(600, 400);
 
-        //// Daten plotten
-        //foreach (var call in data)
-        //{
-        //    var color = call.Status == "ANSWERED" ? System.Drawing.Color.Green : System.Drawing.Color.Red;
-        //    plt.AddBar(call.Timestamp.ToOADate(), call.Duration / 3600.0, color); // Dauer in Stunden umrechnen
-        //}
-
-        //// Achsen beschriften und formatieren
-        //plt.XAxis.Label("Zeit");
-        //plt.YAxis.Label("Mitarbeiter");
-        //plt.XAxis.DateTimeFormat(true);
-
-        //// Plot speichern oder anzeigen
-        //plt.SaveFig("anruf_plot.png"); // Speichern als PNG
-        //plt.Show(); // Anzeigen
-    }
 }
-
