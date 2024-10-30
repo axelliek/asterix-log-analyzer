@@ -6,5 +6,5 @@
 public class ProgramOptions
 {
     public string InputFilePath { get; set; } = string.Empty;
-    public string OutputFilePath { get; set; } = string.Empty;
+    public string OutputDirectory { get; set; } = string.Empty;
 }

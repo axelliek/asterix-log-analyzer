@@ -4,8 +4,9 @@ using System.Diagnostics;
 using Asterix_Log_Analyzer.Domain;
 using Asterix_Log_Analyzer.Logging;
 using Asterix_Log_Analyzer.Chart;
-
-
+using System.ComponentModel;
+using System.Reflection.Metadata.Ecma335;
+using System.Windows.Markup;
 
 namespace Asterix_Log_Analyzer;
 
@@ -16,11 +17,7 @@ class Program
     static void Main(string[] args)
     {
 
-        //args.ToList().ForEach(arg => { Console.WriteLine(arg.ToString()); });
         var programOptions = ProcessProgramArgs(args);
-
-        //string filePath = @".\Data\Testdaten.txt"; // Anpassung erforderlich, wenn die Datei woanders liegt
-
 
         try
         {
@@ -28,7 +25,11 @@ class Program
 
             List<CallInfo> calls = ConvertLogsToCalls(data, out long? firstCall, out long? lastCall);
 
+#if DEBUG
+            WriteCallsInformation(calls);
+#endif
             string imageFullName = GetBitmapFileName(programOptions);
+
 
             if (CreateChartBitmap(imageFullName, GenerateChartInfo(calls, firstCall, lastCall)))
             {
@@ -51,12 +52,14 @@ class Program
 
     private static string GetBitmapFileName(ProgramOptions programOptions)
     {
-        var directory = Directory.CreateDirectory(programOptions.OutputFilePath);
+        var directory = Directory.CreateDirectory(programOptions.OutputDirectory);
         var inputFileName = Path.GetFileNameWithoutExtension(programOptions.InputFilePath);
         var fileName = $"{inputFileName}-{DateTime.Now:yyMMdd-HHmmss}.bmp";
-        Console.WriteLine(fileName);
+
+        //Console.WriteLine(fileName);
         var imageFullName = Path.Combine(directory.FullName, fileName);
-        Console.WriteLine(imageFullName);
+        //Console.WriteLine(imageFullName);
+
         return imageFullName;
     }
 
@@ -78,28 +81,26 @@ class Program
         string[] find = ["ABANDON", /*"ENTERQUEUE", "CONNECT",*/ /*"RINGNOANSWER",*/ "COMPLETEAGENT", "AGENTDUMP", "COMPLETECALLER"/*, "ENTERQUEUE"*/];
         string[] entered = ["ENTERQUEUE"];
         string[] connected = ["CONNECT"];
-        //Console.WriteLine($"Eingehende Anrufe {d.Count}");
 
-        Console.WriteLine($"First Call\t{d[0]?.FirstOrDefault()?.CallID}\t{d[0]?.FirstOrDefault()?.Timestamp}");
-        Console.WriteLine($"Last Call\t{d[^1]?.FirstOrDefault()?.CallID}\t{d[^1]?.FirstOrDefault()?.Timestamp}");
-        //var vv = d.GroupBy(x => x.Event).Where(x => find.Contains(x.Key) /* == "ABANDON" || x.Key == "CONNECT"*/ ).ToList(); //.ForEach(x => x);
-        //vv.ForEach(t => Console.WriteLine(GetInfo(t.FirstOrDefault())));
+
+        Debug.WriteLine($"First Call\t{d[0]?.FirstOrDefault()?.CallID}\t{d[0]?.FirstOrDefault()?.Timestamp}");
+        Debug.WriteLine($"Last Call\t{d[^1]?.FirstOrDefault()?.CallID}\t{d[^1]?.FirstOrDefault()?.Timestamp}");
+
+
         var duration = TimeSpan.FromSeconds((double)(lastCall - firstCall));
         var startTime = firstCall;
-        Console.WriteLine($"Duration : {duration}");
-        //int count = 0;
-        var calls = new List<CallInfo>();
-        d.ForEach(item =>
-        {
-            var ii = GetCallInfo1(item);
-            if (ii != null)
-            {
-                calls.Add(ii);
-                Console.WriteLine(ii.ToString());
-            }
-        });
 
-        var callsAbandoned = calls.Where(x => x.CallStatus == CallInfo.StatusAbandon).Count(); //.ToList().Count;
+        Console.WriteLine($"Duration : {duration}");
+
+        var calls = new List<CallInfo>();
+        d.ForEach(item => { calls.Add(GetCallInfo(item)); });
+
+        return calls;
+    }
+
+    private static void WriteCallsInformation(List<CallInfo> calls)
+    {
+        var callsAbandoned = calls.Where(x => x.CallStatus == CallInfo.StatusAbandon).Count();
         var callsCompleted = calls.Where(x => x.CallStatus == CallInfo.StatusComplete).Count();
         var callsConnect = calls.Where(x => x.CallStatus == CallInfo.StatusConnect).Count();
         var callsWaited = calls.Where(x => x.CallStatus == CallInfo.StatusWaited).Count();
@@ -108,8 +109,8 @@ class Program
         Console.WriteLine($"Abgebrochene Anrufe {callsAbandoned} ");
         Console.WriteLine($"Angenommene Anrufe {callsConnect} ");
         Console.WriteLine($"Wartende Anrufe {callsWaited} ");
-        return calls;
     }
+
     private static List<LogEntry>? GetAllLogEntries(string inputFilePath)
     {
         List<LogEntry>? data;
@@ -135,12 +136,17 @@ class Program
     private static ChartInfo GenerateChartInfo(List<CallInfo> calls, long? startTime, long? endTime)
     {
         if (startTime == null || endTime == null)
-            throw new ArgumentNullException($"{nameof(GenerateChartInfo)}: Parameter {nameof(startTime)} or {nameof(endTime)} are null or empty");
+        {
+            ArgumentNullException argumentNullException = new($"{nameof(GenerateChartInfo)}: Parameter {nameof(startTime)} or {nameof(endTime)} are null or empty");
+            throw argumentNullException;
+        }
 
-        ChartInfo chartInfo = new ChartInfo
+        ChartInfo chartInfo = new()
         {
             TimeStart = DateTimeOffset.FromUnixTimeSeconds((long)startTime!).DateTime.ToString("HH:MM:ss"),
-            TimeEnd = DateTimeOffset.FromUnixTimeSeconds((long)endTime!).DateTime.ToString("HH:MM:ss")
+            TimeEnd = DateTimeOffset.FromUnixTimeSeconds((long)endTime!).DateTime.ToString("HH:MM:ss"),
+            StartTime = (long)startTime!,
+            EndTime = (long)endTime!,
         };
 
         List<string> xAxisLabels = []; // new List<string>();
@@ -153,13 +159,88 @@ class Program
             xAxisLabels.Add($"{dt.Hour:D2}:{dt.Minute:D2}:{dt.Second:D2}");
         }
 
-        chartInfo.xCategories = xAxisLabels;
-        chartInfo.yCategories = ["1", "2", "3"];
+        chartInfo.XCategories = xAxisLabels;
+        chartInfo.YCategories = [];
 
+        List<List<StackedBarValues>> values = [new List<StackedBarValues>()];
+
+        bool InitSlot(int slotIndex, StackedBarValues t)
+        {
+            if (slotIndex > values.Count - 1)
+            {
+                Debug.WriteLine($"Current slot {slotIndex}");
+                values.Add(new List<StackedBarValues>());
+                values[slotIndex].Add(t);
+                return true;
+            }
+            Debug.WriteLine($"Current slot {slotIndex} {values[slotIndex].Count}");
+            return false;
+        }
+        int currentslot = 0;
+
+
+        void AddToSlots(StackedBarValues t)
+        {
+            if (InitSlot(currentslot, t)) return;
+
+            //if (values[currentslot].Count == 0) { values[currentslot].Add(t); return; }
+            //for (var j = 0; j < values[currentslot].Count; j++)
+            foreach (var list in values)
+            {
+                if (InitSlot(currentslot, t)) return;
+                if (SlotIsBusy(list, t))
+                {
+                    currentslot++;
+                    continue;
+                }
+
+                if (!SlotIsBusy(list, t))
+                {
+                    list.Add(t);
+                    currentslot = 0;
+                    return;
+                }
+
+            }
+            //currentslot++;
+            InitSlot(currentslot, t);
+            currentslot = 0;
+
+        }
+
+        foreach (var call in calls)
+        {
+            var t = new StackedBarValues { Start = call.CallStart, End = call.CallEnd, Wait = call.CallWaittime, Speak = call.CallSpeaktime, Status = call.CallStatus };
+
+            //var call = calls[k];
+            AddToSlots(t);
+
+        }
+        for(int title = 0; title < values.Count; title++)
+        {
+            chartInfo.YCategories.Add($"{title+1}");
+        }
+        chartInfo.Values = values;
         return chartInfo;
     }
+    static bool Intersect(StackedBarValues call, StackedBarValues current)
+    {
+        if (current.Start >= call.End) return false;
 
-    private static CallInfo GetCallInfo1(IGrouping<string, LogEntry> item)
+
+        return true;
+    }
+    private static bool SlotIsBusy(List<StackedBarValues> stackedBarValues, StackedBarValues current)
+    {
+        foreach (var call in stackedBarValues)
+        {
+            bool isBusy = Intersect(call, current);
+            if (isBusy) return true;
+        }
+        return false;
+    }
+
+    private static CallInfo GetCallInfo(IGrouping<string, LogEntry> item)
     {
         string[] completing = ["COMPLETEAGENT", "COMPLETECALLER"];
 
@@ -219,19 +300,19 @@ class Program
         var pOptions = new ProgramOptions()
         {
             InputFilePath = @".\Data\Testdaten.txt",
-            OutputFilePath = @".\Output"
+            OutputDirectory = @".\Output"
         };
 
         if (args.Length == 1)
         {
             pOptions.InputFilePath = args[0];
-            pOptions.OutputFilePath = @".\Output";
         }
+
         return pOptions;
 
     }
 
-    public static void DisplayPrompt()
+    private static void DisplayPrompt()
     {
         Console.WriteLine("Prompt");
         Console.WriteLine("Asterix-Log-Analyzer.exe [<LOG_FILE> [-o <BITMAP_OUTPUT_DIRECTORY>]]");
@@ -254,72 +335,7 @@ class Program
             }
         };
         process.Start();
-        //process.WaitForExit();
-        //output = process.StandardOutput.ReadToEnd();
-        //error = process.StandardError.ReadToEnd();
     }
-
-    //private static string GetInfo(LogEntry? entry)
-    //{
-    //    if (entry == null)
-    //        return string.Empty;
-    //    var wz = (entry.Event == "COMPLETECALLER" || entry.Event == "COMPLETEAGENT")
-    //        ? $"Agent {entry.Channel} Wartezeit {entry.Param1} Anrufdauer {entry.Param2}"
-    //        : entry.Event == "ABANDON"
-    //        //? $"Wartezeit {entry.Param3}" 
-    //        //: entry.Event == "CONNECT" 
-    //        ? $"Wartezeit {entry.Param1}"
-    //        : string.Empty;
-    //    return $"{entry} {wz}";
-    //}
-
-    //private static CallInfo GetCallInfo(LogEntry? entry)
-    //{
-    //    if (entry == null) return null;
-
-    //    CallInfo ci = new CallInfo()
-    //    {
-    //        CallId = entry.CallID,
-    //        AgentId = entry.Channel!,
-    //        CallEnd = 0,
-    //        CallSpeaktime = 0,
-    //        CallStatus = CallInfo.StatusUnknown,
-    //        CallWaittime = 0,
-    //    };
-    //    switch (entry.Event)
-    //    {
-    //        case "COMPLETECALLER":
-    //        case "COMPLETEAGENT":
-    //            ci.AgentId = entry.Channel!;
-    //            ci.CallWaittime = long.Parse(entry.Param1!);
-    //            ci.CallStatus = CallInfo.StatusComplete;
-    //            ci.CallSpeaktime = long.Parse(entry.Param2!);
-    //            ci.CallEnd = long.Parse(entry.Timestamp);
-    //            //ci.CallStart = ci.CallEnd - ci.CallSpeaktime - ci.CallWaittime;
-    //            break;
-    //        case "ABANDON":
-    //            ci.CallWaittime = long.Parse(entry.Param1!);
-    //            ci.CallStatus = CallInfo.StatusAbandon;
-    //            ci.CallEnd = long.Parse(entry.Timestamp!);
-    //            //ci.CallStart = ci.CallEnd - ci.CallSpeaktime - ci.CallWaittime;
-    //            break;
-
-
-    //        default:
-    //            break;
-
-    //    }
-
-    //    //var wz = (entry.Event == "COMPLETECALLER" || entry.Event == "COMPLETEAGENT")
-    //    //    ? $"Agent {entry.Channel} Wartezeit {entry.Param1} Anrufdauer {entry.Param2}"
-    //    //    : entry.Event == "ABANDON"
-    //    //    //? $"Wartezeit {entry.Param3}" 
-    //    //    //: entry.Event == "CONNECT" 
-    //    //    ? $"Wartezeit {entry.Param1}"
-    //    //    : string.Empty;
-    //    //Console.WriteLine(ci.ToString());
-    //    return ci;
-    //}
 
 #pragma warning disable CA1416
     // The code that's violating the rule is on this line.
@@ -331,55 +347,82 @@ class Program
 
         using var bmp = new Bitmap(width, height);
         using var g = Graphics.FromImage(bmp);
+
+        var xAxisXOffset = margin;
+        var xAxisYOffset = height - margin;
         g.Clear(Color.White);
 
         // Draw the axes
         g.DrawLine(Pens.Black, margin, height - margin, margin, margin); // Y-axis
         g.DrawLine(Pens.Black, margin, height - margin, width - margin, height - margin); // X-axis
 
-        // Example data for the chart
-        string[] xCategories = chartInfo.xCategories!.ToArray();
-        //string[] categories = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-        int[] values = { 10, 20, 30, 40, 30, 50, 20, 40, 10, 30, 20, 50 };
-        string[] ycategories = { "0", "1", "2", "3", "4" };
-        string[] yCategories = chartInfo.yCategories!.ToArray();
+        string[] xCategories = [.. chartInfo.XCategories!];
+
+        string[] yCategories = [.. chartInfo.YCategories!];
+
         using var current = new System.Drawing.Font("Arial", 8);
         var step = (width - margin) / xCategories.Length;
+
         for (var i = 0; i < xCategories.Length; i++)
         {
             var x = margin + step * i; // Position of the bar
-            var y = height - margin - values[i] * 4; // Height of the bar
+            var y = height - margin + 20;
+
             Debug.WriteLine($"DrawString {xCategories[i]} pos: (x:{x}, y:{y})");
-            //g.FillRectangle(Brushes.Blue, x, y, 60, values[i] * 4); // Draw the bar
-            g.DrawString(xCategories[i], current, Brushes.Black, x, height - margin + 20); // Label
+            
+            g.DrawString(xCategories[i], current, Brushes.Black, x, y); // Label
         }
-        var barHight = (height - 2 * margin) / (ycategories.Length - 1);
-        var xAxisXOffset = margin;
-        var xAxisYOffset = height - margin;
-        for (var i = 0; i <= 1; i++)
+
+        var barHight = (height - 2 * margin) / (yCategories.Length );
+
+
+        var Scale = (chartInfo.EndTime - chartInfo.StartTime) / (width - 2 * margin);
+        for (var i = 0; i < chartInfo.Values!.Count; i++)
         {
-            g.FillRectangle(Brushes.Green, xAxisXOffset, xAxisYOffset - barHight, 100, barHight); // Draw the bar
-            g.FillRectangle(Brushes.Red, xAxisXOffset + 100, xAxisYOffset - barHight, 100, barHight); // Draw the bar
-            g.FillRectangle(Brushes.Yellow, xAxisXOffset + 200, xAxisYOffset - barHight, 100, barHight); // Draw the bar
+            for (var j = 0; j < chartInfo.Values[i].Count; j++)
+            {
+                var bb = chartInfo.Values[i][j];
+
+                var xcS = (bb.Start - chartInfo.StartTime) / Scale;
+                var xcE = (bb.End - chartInfo.EndTime);
+
+                var waitWidth = bb.Wait / Scale;
+                var waitStart = xcS;
+                var speakStart = waitStart + waitWidth;
+                var speakWidth = bb.Speak / Scale;
+                Debug.WriteLine($"{xcS} {bb.Status} {waitStart} {bb.Start - chartInfo.StartTime} {bb.Wait} {bb.Speak}");
+                Debug.WriteLine($"{i} {j} {xAxisXOffset + speakStart}, {xAxisYOffset - (barHight * (i + 1))}, {speakWidth} {barHight}");
+                
+                g.FillRectangle(Brushes.Green, xAxisXOffset + speakStart, xAxisYOffset - (barHight * (i + 1)), speakWidth, barHight); // Draw the bar
+                if (bb.Status == "ABANDON" || bb.Status == "WAITED")
+                {
+                    g.FillRectangle(Brushes.Red, xAxisXOffset + waitStart, xAxisYOffset - (barHight * (i + 1)), waitWidth, barHight); // Draw the bar
+                }
+                else
+                {
+                    g.FillRectangle(Brushes.Yellow, xAxisXOffset + waitStart, xAxisYOffset - (barHight * (i + 1)), waitWidth, barHight); // Draw the bar
+                }
+            }
         }
 
 
         var barTextYMargin = barHight;
         var barXOffset = 30;
-        var ySlots = barHight * ycategories.Length;
+        var ySlots = barHight * yCategories.Length;
+
         // Draw y labels
-        for (var i = 0; i < ycategories.Length; i++)
+        for (var i = 0; i < yCategories.Length; i++)
         {
             // y axis label text position
             var xText = margin - barXOffset;
-            var yText = height - margin - (i * barTextYMargin);
+            var yText = height - margin - ((i+1) * barTextYMargin);
 
-            Debug.WriteLine($"DrawString {ycategories[i]} pos: ( x:{xText}, y:{yText} )");
+            Debug.WriteLine($"DrawString {yCategories[i]} pos: ( x:{xText}, y:{yText} )");
 
-            g.DrawString(ycategories[i], current, Brushes.Black, xText, yText);
+            g.DrawString(yCategories[i], current, Brushes.Black, xText, yText);
         }
         File.Delete(imagePath);
-        // Save the chart as PNG
+        // Save the chart as BMP
         bmp.Save(imagePath);
         return true;
     }
