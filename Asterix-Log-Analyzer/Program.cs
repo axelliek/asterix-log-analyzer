@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Asterix_Log_Analyzer.Domain;
 using Asterix_Log_Analyzer.Logs;
 using Asterix_Log_Analyzer.Chart;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 
