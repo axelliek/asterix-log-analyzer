@@ -19,9 +19,9 @@ partial class Program
             using var bmp = new Bitmap(width, height);
             using var g = Graphics.FromImage(bmp);
 
-            var xAxisXOffset = margin;
+            var xAxisXOffset = margin + 5;
             var xAxisYOffset = height - margin;
-            g.Clear(Color.White);
+            g.Clear(Color.LightGray);
 
             // Draw the axes
             g.DrawLine(Pens.Black, margin, height - margin, margin, margin); // Y-axis
@@ -31,23 +31,26 @@ partial class Program
 
             string[] yCategories = [.. chartInfo.YCategories!];
 
-            using var current = new System.Drawing.Font("Arial", 8);
-            var step = (width - margin) / xCategories.Length;
+            using var current = new Font("Arial", 8);
+            float step = (float)(width - margin-10) / xCategories.Length;
 
             for (var i = 0; i < xCategories.Length; i++)
             {
-                var x = margin + step * i; // Position of the bar
-                var y = height - margin + 20;
+                float x = margin + step * i; // Position of the bar
+                float y = height - margin + 20;
 
                 Debug.WriteLine($"DrawString {xCategories[i]} pos: (x:{x}, y:{y})");
 
                 g.DrawString(xCategories[i], current, Brushes.Black, x, y); // Label
             }
 
-            var barHight = (height - 2 * margin) / (yCategories.Length);
+            var barHeight = (height - 2 * margin) / (yCategories.Length);
 
+            var widthLog = chartInfo.EndTime - chartInfo.StartTime;
+            var widthChart = (width - 2 * margin);
 
-            var Scale = (chartInfo.EndTime - chartInfo.StartTime) / (width - 2 * margin);
+            float Scale = (float)(chartInfo.EndTime - chartInfo.StartTime) / (float)(width - 2 * margin-10);
+
             for (var i = 0; i < chartInfo.Values!.Count; i++)
             {
                 for (var j = 0; j < chartInfo.Values[i].Count; j++)
@@ -55,31 +58,51 @@ partial class Program
                     var bb = chartInfo.Values[i][j];
 
                     var xcS = (bb.Start - chartInfo.StartTime) / Scale;
-                    var xcE = (bb.End - chartInfo.EndTime);
 
                     var waitWidth = bb.Wait / Scale;
                     var waitStart = xcS;
                     var speakStart = waitStart + waitWidth;
                     var speakWidth = bb.Speak / Scale;
-                    Debug.WriteLine($"{xcS} {bb.Status} {waitStart} {bb.Start - chartInfo.StartTime} {bb.Wait} {bb.Speak}");
-                    Debug.WriteLine($"{i} {j} {xAxisXOffset + speakStart}, {xAxisYOffset - (barHight * (i + 1))}, {speakWidth} {barHight}");
 
-                    g.FillRectangle(Brushes.Green, xAxisXOffset + speakStart, xAxisYOffset - (barHight * (i + 1)), speakWidth, barHight); // Draw the bar
-                    if (bb.Status == "ABANDON" || bb.Status == "WAITED")
+                    var bWidth = (bb.Wait + bb.Speak);
+                    var bHeightScale = barHeight / (bb.Wait + bb.Speak);
+
+                    var barHeightWait = bb.Wait * bHeightScale;
+                    var barHeightSpeak = bb.Speak * bHeightScale;
+
+                    Debug.WriteLine($"{xcS} {bb.Status} {waitStart} {bb.Start - chartInfo.StartTime} {bb.Wait} {bb.Speak}");
+                    Debug.WriteLine($"{i} {j} {xAxisXOffset + speakStart}, {xAxisYOffset - (barHeight * (i + 1))}, {speakWidth} {barHeight}");
+
+                    g.FillRectangle(Brushes.Green,
+                                    (float)(xAxisXOffset + waitStart),
+                                    xAxisYOffset - (barHeight * (i + 1)),
+                                    (float)(waitWidth + speakWidth),
+                                    barHeightSpeak); // Draw the bar
+
+                    if (bb.Status == "ABANDON" || bb.Status == "WAITED" /*|| bb.Status == "CONNECT"*/)
                     {
-                        g.FillRectangle(Brushes.Red, xAxisXOffset + waitStart, xAxisYOffset - (barHight * (i + 1)), waitWidth, barHight); // Draw the bar
+                        g.FillRectangle(Brushes.Red,
+                            (float)(xAxisXOffset + waitStart),
+                            xAxisYOffset - (barHeight * (i + 1)),
+                            (float)(waitWidth + speakWidth),
+                            barHeight); // Draw the bar
                     }
                     else
                     {
-                        g.FillRectangle(Brushes.Yellow, xAxisXOffset + waitStart, xAxisYOffset - (barHight * (i + 1)), waitWidth, barHight); // Draw the bar
+                        g.FillRectangle(Brushes.Yellow,
+                            (float)(xAxisXOffset + waitStart),
+                            xAxisYOffset - (barHeight * (i + 1)) + barHeightSpeak,
+                            (float)(waitWidth + speakWidth),
+                            barHeight - barHeightSpeak); // Draw the bar
+
                     }
                 }
             }
 
 
-            var barTextYMargin = barHight;
+            var barTextYMargin = barHeight;
             var barXOffset = 30;
-            var ySlots = barHight * yCategories.Length;
+            var ySlots = barHeight * yCategories.Length;
 
             // Draw y labels
             for (var i = 0; i < yCategories.Length; i++)
