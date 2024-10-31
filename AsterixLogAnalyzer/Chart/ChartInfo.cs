@@ -1,4 +1,4 @@
-﻿namespace Asterix_Log_Analyzer.Chart;
+﻿namespace AsterixLogAnalyzer.Chart;
 
 
 public class ChartInfo

@@ -1,4 +1,4 @@
-﻿namespace Asterix_Log_Analyzer;
+﻿namespace AsterixLogAnalyzer;
 
 /**
  * <summary>Represents Program start options</summary>
@@ -35,6 +35,6 @@ public class ProgramOptions
     public static void DisplayPrompt()
     {
         Console.WriteLine("Prompt");
-        Console.WriteLine("Asterix-Log-Analyzer.exe [<LOG_FILE> [-o <BITMAP_OUTPUT_DIRECTORY>]]");
+        Console.WriteLine("AsterixLogAnalyzer.exe [<LOG_FILE> [-o <BITMAP_OUTPUT_DIRECTORY>]]");
     }
 }

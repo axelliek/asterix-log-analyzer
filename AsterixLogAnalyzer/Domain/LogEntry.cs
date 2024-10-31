@@ -1,4 +1,4 @@
-﻿namespace Asterix_Log_Analyzer.Logging;
+﻿namespace AsterixLogAnalyzer.Domain;
 
 public class LogEntry
 {

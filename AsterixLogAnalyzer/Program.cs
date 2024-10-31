@@ -1,11 +1,8 @@
 ﻿using System.Diagnostics;
-using Asterix_Log_Analyzer.Domain;
-using Asterix_Log_Analyzer.Logging;
-using System.ComponentModel;
-using System.Reflection.Metadata.Ecma335;
-using System.Windows.Markup;
+using AsterixLogAnalyzer.Domain;
+using AsterixLogAnalyzer.Chart;
 
-namespace Asterix_Log_Analyzer;
+namespace AsterixLogAnalyzer;
 
 partial class Program
 {
@@ -28,10 +25,11 @@ partial class Program
 
             var chartInfo = ChartInfoConverter.GenerateChartInfo(calls, firstCall, lastCall);
 
-            if (Chart.CreateChartBitmap(imageFullName, chartInfo))
+            if (!StackedBarChart.CreateChartBitmap(imageFullName, chartInfo))
             {
-                RunProcess(imageFullName);
+                return;
             }
+            RunProcess(imageFullName);
         }
         catch (ArgumentNullException aex)
         {
