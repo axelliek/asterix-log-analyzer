@@ -7,11 +7,13 @@ partial class Program
 {
     public class LogEntryReader
     {
-        public static List<LogEntry>? GetAllLogEntries(string inputFilePath)
+        private const char LineSeparator = '|';
+
+        public static List<LogEntry>? GetAllLogEntries(string filePath)
         {
-            List<LogEntry>? data;
-            var text = File.ReadAllLines(inputFilePath);
-            data = text
+            var allTextLinesInFile = File.ReadAllLines(filePath);
+
+            var logEntries = allTextLinesInFile
                 .Select(line => line.Split(LineSeparator))
                 .Select(parts => new LogEntry()
                 {
@@ -25,8 +27,13 @@ partial class Program
                     Param3 = parts.Length >= 8 ? parts[7] : string.Empty,
                 })
                 .ToList();
-            if (data == null || (data?.Count == 0)) throw new Exception("Data is null or empty");
-            return data;
+
+            if (logEntries == null || (logEntries?.Count == 0))
+            {
+                throw new Exception("Data is null or empty");
+            }
+
+            return logEntries;
         }
     }
 }

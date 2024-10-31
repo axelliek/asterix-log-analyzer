@@ -9,7 +9,7 @@ namespace Asterix_Log_Analyzer;
 
 partial class Program
 {
-    private const char LineSeparator = '|';
+   
 
     static void Main(string[] args)
     {
@@ -18,13 +18,16 @@ partial class Program
 
         try
         {
-            List<LogEntry>? data = LogEntryReader.GetAllLogEntries(ProgramOptions.InputFilePath);
+            // Load log file, arrange and convert to log entries fo future use
+            List<LogEntry>? logEntries = LogEntryReader.GetAllLogEntries(ProgramOptions.InputFilePath);
 
-            List<CallInfo> calls = LogsToCallsConverter.ConvertLogsToCalls(data, out long? firstCall, out long? lastCall);
+            //TODO:
+            List<CallInfo> calls = LogsToCallsConverter.ConvertLogsToCalls(logEntries, out long? firstCall, out long? lastCall);
 
             string imageFullName = ProgramOptions.GetBitmapFileName();
 
             var chartInfo = ChartInfoConverter.GenerateChartInfo(calls, firstCall, lastCall);
+
             if (Chart.CreateChartBitmap(imageFullName, chartInfo))
             {
                 RunProcess(imageFullName);
