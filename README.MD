@@ -1,3 +1,3 @@
-# asterixloganalyzer
+# Asterix Log Analyzer
 
-Testaufgabe für DMRZ
+Testaufgabe fÃ¼r DMRZ
