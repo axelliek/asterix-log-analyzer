@@ -1,5 +1,8 @@
 ﻿namespace AsterixLogAnalyzer.Domain;
 
+/**
+ * <summary>Represents LogEntry</summary>
+ */
 public class LogEntry
 {
     public required string Timestamp { get; set; }
@@ -12,6 +15,6 @@ public class LogEntry
     public string? Param3 { get; set; }
     public override string ToString()
     {
-        return $"{CallID}\t{Event}";// base.ToString();
+        return $"{CallID}\t{Event}";
     }
 }

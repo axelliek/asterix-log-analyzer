@@ -2,10 +2,17 @@
 
 namespace AsterixLogAnalyzer.Domain;
 
+
+/**
+ * <summary>class LogEntryReader</summary>
+ */
 public class LogEntryReader
 {
     private const char LineSeparator = '|';
 
+    /**
+     * <summary>Reads all log entries from file </summary>
+     */
     public static List<LogEntry>? GetAllLogEntries(string filePath)
     {
         var allTextLinesInFile = File.ReadAllLines(filePath);

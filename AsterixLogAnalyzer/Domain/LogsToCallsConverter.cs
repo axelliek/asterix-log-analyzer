@@ -3,8 +3,14 @@ using System.Diagnostics;
 
 namespace AsterixLogAnalyzer.Domain;
 
+/**
+ * <summary>class LogsToCallsConverter</summary>
+ */
 public class LogsToCallsConverter
 {
+    /**
+     * <summary>Converts LogEntries to calls</summary>
+     */
     public static List<CallInfo> ConvertLogsToCalls(List<LogEntry>? data, out long? firstCall, out long? lastCall)
     {
 
@@ -50,7 +56,6 @@ public class LogsToCallsConverter
         Console.WriteLine($"Calls connected but not ended {callsConnect} ");
         Console.WriteLine($"Ringing calls but not ended {callsWaited} ");
     }
-
 
     private static CallInfo GetCallInfo(IGrouping<string, LogEntry> item)
     {
