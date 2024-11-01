@@ -3,9 +3,27 @@ using System.Diagnostics;
 
 namespace AsterixLogAnalyzer.Domain;
 
-
+/**
+ * <summary>Represents chart information converter</summary>
+ */
 public class ChartInfoConverter
 {
+
+    private const int DefaultTimeBarTick = 5 * 60; // 5 minutes * 60 seconds
+
+    /**
+     * <summary>TimeBarTick in seconds</summary>
+     */
+    public static int TimeBarTick { get; set; } = DefaultTimeBarTick;
+
+    /**
+     * <summary>Arrange time bar ticks property</summary>
+     */
+    public static bool ArrangeTimeTicks { get; set; } = true;
+
+    /**
+     * <summary>Generates chart information structure</summary>
+     */
     public static ChartInfo GenerateChartInfo(List<CallInfo> calls, long? startTime, long? endTime)
     {
         if (startTime == null || endTime == null)
@@ -19,19 +37,22 @@ public class ChartInfoConverter
         {
             TimeStart = DateTimeOffset.FromUnixTimeSeconds((long)startTime!).DateTime.ToString("HH:MM:ss"),
             TimeEnd = DateTimeOffset.FromUnixTimeSeconds((long)endTime!).DateTime.ToString("HH:MM:ss"),
-            StartTime = (long)startTime!,
-            EndTime = (long)endTime!,
         };
 
-        List<string> xAxisLabels = []; // new List<string>();
-
-        DateTimeOffset dt = DateTimeOffset.FromUnixTimeSeconds((long)startTime);
-        for (long i = (long)startTime; i < endTime; i += 600) //15min * 60 secs 
+        if (ArrangeTimeTicks)
         {
-            dt = dt.AddSeconds(900);//.DateTime;
-
-            xAxisLabels.Add($"{dt.Hour:D2}:{dt.Minute:D2}:{dt.Second:D2}");
+            ArrangeTimeBarTicks(TimeBarTick, ref startTime, ref endTime);
         }
+
+
+        List<string> xAxisLabels = [];
+        for (long i = (long)startTime!; i <= endTime; i += TimeBarTick)
+        {
+            DateTimeOffset dt = DateTimeOffset.FromUnixTimeSeconds((long)i);
+            xAxisLabels.Add($"{dt.Hour:D2}:{dt.Minute:D2}"); //:{ dt.Second:D2} 
+        }
+
+
 
         chartInfo.XCategories = xAxisLabels;
         chartInfo.YCategories = [];
@@ -41,10 +62,30 @@ public class ChartInfoConverter
         {
             chartInfo.YCategories.Add($"{title + 1}");
         }
+
+        chartInfo.StartTime = (long)startTime!;
+        chartInfo.EndTime = (long)endTime!;
+
         chartInfo.Values = values;
+
         return chartInfo;
     }
 
+    /**
+     * <summary>Arrange time bar to be at zero seconds</summary>
+     */
+    private static void ArrangeTimeBarTicks(int timeBarTick, ref long? startTime, ref long? endTime)
+    {
+        DateTimeOffset dt1 = DateTimeOffset.FromUnixTimeSeconds((long)startTime!);
+        var seconds = dt1.Second;
+        var diff = (endTime - (startTime - seconds)) % timeBarTick;
+        startTime -= seconds;
+        endTime += diff;
+    }
+
+    /**
+     * <summary>Calculates slots</summary>
+     */
     private static List<List<StackedBarValues>> CalculateSlots(List<CallInfo> calls)
     {
         List<List<StackedBarValues>> values = [[]];
@@ -108,6 +149,9 @@ public class ChartInfoConverter
         return values;
     }
 
+    /**
+     * <summary>CAlculates slot is busy</summary>
+     */
     private static bool SlotIsBusy(List<StackedBarValues> stackedBarValues, StackedBarValues current)
     {
         foreach (var call in stackedBarValues)

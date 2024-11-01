@@ -3,6 +3,10 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+#Output directory
+[Oo]utput/
+*.bmp
+
 # dotenv files
 .env
 

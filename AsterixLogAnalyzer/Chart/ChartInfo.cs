@@ -1,6 +1,8 @@
 ﻿namespace AsterixLogAnalyzer.Chart;
 
-
+/**
+ * <summary>class ChartInfo</summary>
+ */
 public class ChartInfo
 {
     public List<string>? XCategories { get; set; }
@@ -11,7 +13,7 @@ public class ChartInfo
     public int Margin { get; set; } = 100;
     public string? TimeStart { get; internal set; }
     public string? TimeEnd { get; internal set; }
-    public long StartTime { get; internal set; }
-    public long EndTime { get; internal set; }
+    public long StartTime { get; set; }
+    public long EndTime { get; set; }
 
 }

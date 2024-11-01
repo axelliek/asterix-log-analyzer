@@ -6,29 +6,40 @@ namespace AsterixLogAnalyzer;
 
 partial class Program
 {
-   
+
 
     static void Main(string[] args)
     {
 
-        ProgramOptions.ProcessProgramArgs(args);
+        if (!ProgramOptions.ProcessProgramArgs(args)) return;
 
         try
         {
             // Load log file, arrange and convert to log entries fo future use
             List<LogEntry>? logEntries = LogEntryReader.GetAllLogEntries(ProgramOptions.InputFilePath);
 
-            //TODO:
             List<CallInfo> calls = LogsToCallsConverter.ConvertLogsToCalls(logEntries, out long? firstCall, out long? lastCall);
-
-            string imageFullName = ProgramOptions.GetBitmapFileName();
-
             var chartInfo = ChartInfoConverter.GenerateChartInfo(calls, firstCall, lastCall);
+            using var bitmap = new StackedBarChart(chartInfo).Bitmap;
 
-            if (!StackedBarChart.CreateChartBitmap(imageFullName, chartInfo))
+            if (bitmap == null)
             {
                 return;
             }
+
+            string imageFullName = ProgramOptions.GetBitmapFileName();
+
+#pragma warning disable CA1416
+            bitmap.Save(imageFullName);
+#pragma warning restore CA1416
+
+            if (!File.Exists(imageFullName))
+            {
+                Console.WriteLine($"ERROR: Bitmap was not created.");
+                return;
+            }
+            Console.WriteLine($"Bitmap is written to:\n{imageFullName}");
+
             RunProcess(imageFullName);
         }
         catch (ArgumentNullException aex)

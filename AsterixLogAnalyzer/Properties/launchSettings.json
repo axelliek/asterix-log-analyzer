@@ -2,7 +2,7 @@
   "profiles": {
     "AsterixLogAnalyzer": {
       "commandName": "Project",
-      "commandLineArgs": "TestDaten.txt -o .\\Output"
+      "commandLineArgs": ".\\Data\\Testdaten.txt -o .\\Output"
     }
   }
 }
