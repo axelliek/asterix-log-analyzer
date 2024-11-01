@@ -96,4 +96,4 @@ C:\temp\asterix-log-analyzer\AsterixLogAnalyzer\Testdaten-<CURRENT-DATE>.bmp
 
 Es wird automatisch ein Bild geöffnet:
 
-![Testdaten ausgabe Bitmap](/assets/Testdaten-241101-194247.bmp)
+![Testdaten ausgabe Bitmap](/assets/Testdaten-241101-194247.jpg)
