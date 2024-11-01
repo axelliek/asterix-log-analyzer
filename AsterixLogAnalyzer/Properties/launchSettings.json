@@ -1,8 +1,7 @@
 {
   "profiles": {
     "AsterixLogAnalyzer": {
-      "commandName": "Project",
-      "commandLineArgs": ".\\Data\\Testdaten.txt -o .\\Output"
+      "commandName": "Project"
     }
   }
 }
